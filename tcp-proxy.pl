@@ -5,7 +5,7 @@
 #
 # A simple TCP proxy that implements IP-based access control
 # Currently the ports are hard-coded, and it proxies
-# 0.0.0.0:1080 to localhost:55555.
+# *** Modified; Staticly changed to: 0.0.0.0:43 -> whois.iana.org:43 *** 0.0.0.0:1080 to localhost:55555.
 #
 # Written for the article "Turn any Linux computer into SOCKS5
 # proxy in one command," which can be read here:
@@ -19,6 +19,8 @@ use strict;
 use IO::Socket;
 use IO::Select;
 
+# Added flag to override allowed clients list
+my $always_allow = 1;
 my @allowed_ips = ('1.2.3.4', '5.6.7.8', '127.0.0.1', '192.168.1.2');
 my $ioset = IO::Select->new;
 my %socket_map;
@@ -55,7 +57,7 @@ sub new_connection {
     }
     print "Connection from $client_ip accepted.\n" if $debug;
 
-    my $remote = new_conn('localhost', 55555);
+    my $remote = new_conn('whois.iana.org', 43);
     $ioset->add($client);
     $ioset->add($remote);
 
@@ -88,11 +90,12 @@ sub client_ip {
 sub client_allowed {
     my $client = shift;
     my $client_ip = client_ip($client);
+    return 1 if ($always_allow == 1);
     return grep { $_ eq $client_ip } @allowed_ips;
 }
 
-print "Starting a server on 0.0.0.0:1080\n";
-my $server = new_server('0.0.0.0', 1080);
+print "Starting a server on 0.0.0.0:43\n";
+my $server = new_server('0.0.0.0', 43);
 $ioset->add($server);
 
 while (1) {
