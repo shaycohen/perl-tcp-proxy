@@ -15,6 +15,7 @@
 
 use warnings;
 use strict;
+#use Data::Dumper;
 
 use IO::Socket;
 use IO::Select;
@@ -57,7 +58,7 @@ sub new_connection {
     }
     print "Connection from $client_ip accepted.\n" if $debug;
 
-    my $remote = new_conn('whois.iana.org', 43);
+    my $remote = new_conn('whois.ripe.net', 43);
     $ioset->add($client);
     $ioset->add($remote);
 
@@ -98,9 +99,14 @@ print "Starting a server on 0.0.0.0:43\n";
 my $server = new_server('0.0.0.0', 43);
 $ioset->add($server);
 
+my $first_read;
+my $last_write;
+my $query_ip;
 while (1) {
     for my $socket ($ioset->can_read) {
         if ($socket == $server) {
+	    $first_read=0;
+	    $last_write=0;
             new_connection($server);
         }
         else {
@@ -108,10 +114,20 @@ while (1) {
             my $remote = $socket_map{$socket};
             my $buffer;
             my $read = $socket->sysread($buffer, 4096);
-            if ($read) {
-                $remote->syswrite($buffer);
-            }
-            else {
+	    #print Dumper $read;
+            if ( ($read) && ($last_write == 0) ) {
+		if ($first_read == 0) { 
+			$remote->syswrite($buffer);
+			$query_ip=$buffer;
+			$first_read=1;
+		} else { 
+			open RUN_WHOIS, "-|","whois $query_ip" or die "Could not execute local whois binary $!";
+			while (<RUN_WHOIS>) { 
+				$remote->syswrite($_);
+			}
+			$last_write=1;
+		}
+            } else {
                 close_connection($socket);
             }
         }

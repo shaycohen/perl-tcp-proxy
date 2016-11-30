@@ -1,0 +1,11 @@
+[Unit]
+Description=Userland Whois Daemon
+After=syslog.target network.target nss-lookup.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/perl /usr/local/perl-tcp-proxy/tcp-proxy.pl
+ExecStop=/usr/bin/pkill -f 'perl.*tcp-proxy'
+
+[Install]
+WantedBy=multi-user.target
